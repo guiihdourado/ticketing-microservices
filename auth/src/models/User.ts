@@ -1,5 +1,9 @@
+/* eslint-disable no-underscore-dangle */
+/* eslint-disable no-param-reassign */
+/* eslint-disable func-names */
 /* eslint-disable no-use-before-define */
 import mongoose from 'mongoose';
+import { Password } from '../services/Password';
 
 interface IUserAttrs {
   email: string;
@@ -24,6 +28,24 @@ const userSchema = new mongoose.Schema({
     type: String,
     required: true,
   },
+}, {
+  toJSON: {
+    transform(_, ret) {
+      ret.id = ret._id;
+
+      delete ret._id;
+      delete ret.password;
+      delete ret.__v;
+    },
+  },
+});
+
+userSchema.pre('save', async function (done) {
+  if (this.isModified('password')) {
+    const hashed = await Password.toHash(this.get('password'));
+    this.set('password', hashed);
+  }
+  done();
 });
 
 userSchema.statics.build = (attrs: IUserAttrs) => new User(attrs);
